@@ -1,0 +1,2 @@
+Test file from win10 and it is working
+editing from nano (:
