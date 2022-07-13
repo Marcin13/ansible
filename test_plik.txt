@@ -1,0 +1,2 @@
+Plik testowy czy wszystko dziala. // tekst z windy
+A tu linijka z nano (:
