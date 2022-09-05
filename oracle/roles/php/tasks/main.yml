@@ -1,0 +1,10 @@
+---
+- name: Install Main PHP Packages
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: [ 'php-fpm', 'php-mysql', 'php-cli', 'php-common']
+  notify: Restart PHP-FPM
+
+- name: Install PHP Modules / Extensions
+  apt: name={{ item }} update_cache=yes state=latest
+  loop: "{{ php_packages }}"
+  notify: Restart PHP-FPM

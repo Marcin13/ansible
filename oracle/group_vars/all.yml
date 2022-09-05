@@ -1,0 +1,47 @@
+---
+# Initial Server Setup
+# remote_user: The specified user will be created on the remote server and granted sudo privileges.
+remote_user: sammy
+
+# MySQL Setup
+# mysql_root_password: This variable defines the database root password for the MariaDB server.
+mysql_root_password: password
+
+# mysql_app_db: The name of the database to create for the Laravel application. You don’t need to change this value,
+# but you are free to do so if you wish. This value will be used to set up the .env Laravel configuration file.
+mysql_app_db: travellist
+
+# mysql_app_user: The name of the database user for the Laravel application. Again,
+# you are not required to change this value, but you are free to do so.
+mysql_app_user: travellist_user
+
+# mysql_app_pass: The database password for the Laravel application. This should be a secure password of your choosing
+mysql_app_pass: password
+
+# Web Server Setup
+# http_host: The domain name or IP address of the remote host. Here, we’re using an Ansible fact that contains the ipv4
+# address for the eth0 network interface. In case you have domain names pointing to your remote hosts, you may want to
+# create separate variable files for each of them, overwriting this value so that the Nginx configuration contains the
+# correct hostname for each server.
+
+# we change for oracle becouse it donot now ip address
+#http_host: "{{ ansible_facts.eth0.ipv4.address }}"
+http_host: 150.230.124.17
+remote_www_root: /var/www
+
+#name of your app folder.
+app_root_dir: travellist-demo
+
+#cd.
+document_root: "{{ remote_www_root }}/{{ app_root_dir }}/public"
+
+# Laravel Env Variables
+app_name: Travellist
+app_env: dev
+app_debug: true
+app_url: "http://{{ http_host }}"
+db_host: localhost
+db_port: 3306
+db_database: "{{ mysql_app_db }}"
+db_user: "{{ mysql_app_user }}"
+db_pass: "{{ mysql_app_pass }}"

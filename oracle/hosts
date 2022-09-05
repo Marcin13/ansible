@@ -1,0 +1,11 @@
+[dev]
+150.230.124.17
+
+#[prod]
+#192.168.1.172
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+
+## Note: the ansible_python_interpreter variable defines the path to the Python executable on the remote host.
+## Here, we’re telling Ansible to set this variable for all hosts in this inventory file.
