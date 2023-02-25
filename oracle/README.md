@@ -1,10 +1,8 @@
-# Ansible + Laravel Demo
+## Ansible + Laravel Demo
 
 This repository is part of the [Automating Server Setup - a DigitalOcean Workshop Kit](https://www.digitalocean.com/community/meetup_kits/automating-server-setup-with-ansible-a-digitalocean-workshop-kit).
 
-## Quick Setup
-
-TL;DR:
+### Quick Setup
 
 Make sure you have [Ansible installed](https://www.digitalocean.com/community/tutorials/how-to-install-and-configure-ansible-on-ubuntu-18-04) on your control node, which can be your local machine or a remote server dedicated to running Ansible.
 You'll need one Ubuntu 18.04 server to serve as node / host.
