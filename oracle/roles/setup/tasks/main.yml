@@ -84,7 +84,7 @@
 
 # Step 6: Save and apply iptables rules only if changes were made
 - name: Apply iptables rules
-  command: iptables-restore < /etc/iptables/rules.v4
+  command: iptables-restore /etc/iptables/rules.v4
   when: ssh_rule_check.rc == 0 and (port_443_check.rc != 0 or port_80_check.rc != 0)  # Only if port 443 or 80 rule was added
 
 # Step 7: Verify the iptables rules are applied correctly
