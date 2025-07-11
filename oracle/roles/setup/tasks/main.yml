@@ -1,46 +1,47 @@
 ---
-# - name: Install Prerequisites
-#   apt: name=aptitude update_cache=yes state=latest force_apt_get=yes
+- name: Install Prerequisites
+  apt: name=aptitude update_cache=yes state=latest force_apt_get=yes
 
-# # Sudo Group Setup
-# - name: Make sure we have a "{{ remote_user }}" group
-#   group:
-#     name: "{{ remote_user }}"
-#     state: present
+##### SUDO USER SET #####
+- name: Make sure we have a "{{ r_user }}" group
+  group:
+    name: "{{ r_user }}"
+    state: present
 
-# - name: Allow "{{ remote_user }}" group to have password less sudo
-#   lineinfile:
-#     path: /etc/sudoers
-#     state: present
-#     regexp: '^%{{ remote_user }}'
-#     line: '%{{ remote_user }} ALL=(ALL) NOPASSWD: ALL'
-#     validate: '/usr/sbin/visudo -cf %s'
+- name: Allow "{{ r_user }}" group to have password less sudo
+  lineinfile:
+    path: /etc/sudoers
+    state: present
+    regexp: '^%{{ r_user }}'
+    line: '%{{ r_user }} ALL=(ALL) NOPASSWD: ALL'
+    validate: '/usr/sbin/visudo -cf %s'
 
-# # User + Key Setup
-# - name: Create a new regular user with sudo privileges
-#   user:
-#     name: "{{ remote_user }}"
-#     state: present
-#     groups: "{{ remote_user }}"
-#     append: true
-#     create_home: true
-#     shell: /bin/bash
+# User + Key Setup
+- name: Create a new regular user with sudo privileges
+  user:
+    name: "{{ r_user }}"
+    state: present
+    groups: "{{ r_user }}"
+    append: true
+    create_home: true
+    shell: /bin/bash
+# Set ssh key for the new user
+- name: Set authorized key for remote user
+  authorized_key:
+    user: "{{ r_user }}"
+    state: present
+    key: "{{ copy_local_key }}"
 
-# - name: Set authorized key for remote user
-#   authorized_key:
-#     user: "{{ remote_user }}"
-#     state: present
-#     key: "{{ copy_local_key }}"
+- name: Disable password authentication for root
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    state: present
+    regexp: '^#?PermitRootLogin'
+    line: 'PermitRootLogin prohibit-password'
+### END SUDO USER SETUP #####
 
-# - name: Disable password authentication for root
-#   lineinfile:
-#     path: /etc/ssh/sshd_config
-#     state: present
-#     regexp: '^#?PermitRootLogin'
-#     line: 'PermitRootLogin prohibit-password'
-
-################## IPTABLES SETUP ##################
-
+################## IPTABLES SETUP #############################################
+### This section is special for Oracle Cloud Infrastructure (OCI) instances ###
 # Step 1: Check if SSH (port 22) rule exists in iptables
 - name: Check if SSH (port 22) rule exists in iptables
   command: grep -E '^\-A INPUT.*--dport 22' /etc/iptables/rules.v4
@@ -88,16 +89,17 @@
   when: ssh_rule_check.rc == 0 and (port_443_check.rc != 0 or port_80_check.rc != 0)  # Only if port 443 or 80 rule was added
 
 # Step 7: Verify the iptables rules are applied correctly
-- name: Check iptables status to verify rule application
-  command: iptables -L -v -n
-  register: iptables_output
-  changed_when: false
-  failed_when: false
+# - name: Check iptables status to verify rule application
+#   command: iptables -L -v -n
+#   register: iptables_output
+#   changed_when: false
+#   failed_when: false
 
-# Step 8: Display the iptables output for debugging
-- name: Display iptables output for port checking
-  debug:
-    var: iptables_output.stdout_lines
+# # Step 8: Display the iptables output for debugging
+# - name: Display iptables output for port checking
+#   debug:
+#     var: iptables_output.stdout_lines
+
 # Step 9: Restart iptables service to apply new rules
 - name: Restart iptables service to apply the new rules
   systemd:
@@ -105,13 +107,16 @@
     state: restarted
 ######### END IPTABLES SETUP #########
 
+######### SYSTEM PACKAGES SETUP ###########
 # # Install Packages
 # - name: Update apt
 #   apt: update_cache=yes
 
 # - name: Install required system packages etc. curl, acl, git
 #   apt: name={{ sys_packages }} state=latest
+######### END SYSTEM PACKAGES SETUP #########
 
+#### UFW SETUP ####
 # # UFW Setup
 # - name: UFW - Allow SSH connections
 #   ufw:
@@ -123,3 +128,4 @@
 #     state: enabled
 #     policy: deny
 #     direction: incoming
+##### END UFW SETUP #####

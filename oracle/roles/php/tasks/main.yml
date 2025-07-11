@@ -1,10 +1,32 @@
 ---
-- name: Install Main PHP Packages
-  apt: name={{ item }} update_cache=yes state=latest
-  loop: [ 'php-fpm', 'php-mysql', 'php-cli', 'php-common']
-  notify: Restart PHP-FPM
+- name: Add PHP PPA repository (if needed)
+  apt_repository:
+    repo: "ppa:ondrej/php"
+    state: present
+  when: ansible_distribution == "Ubuntu"
 
-- name: Install PHP Modules / Extensions
-  apt: name={{ item }} update_cache=yes state=latest
-  loop: "{{ php_packages }}"
-  notify: Restart PHP-FPM
+# Install the specified PHP version and required PHP packages
+- name: Install PHP and required packages
+  apt:
+    name:
+      - "php{{ php_version }}"
+      - "{{ item }}"
+    state: present
+    update_cache: yes
+  with_items: "{{ php_packages }}"
+  notify: Restart PHP
+
+# Configure PHP settings (file_uploads, max file size, etc.)
+- name: Configure php.ini settings
+  lineinfile:
+    path: "/etc/php/{{ php_version }}/fpm/php.ini"
+    regexp: "^{{ item.key }} ="
+    line: "{{ item.key }} = {{ item.value }}"
+    state: present
+  with_items:
+    - { key: "file_uploads", value: "{{ php_file_uploads }}" }
+    - { key: "upload_max_filesize", value: "{{ php_upload_max_filesize }}" }
+    - { key: "max_file_uploads", value: "{{ php_max_file_uploads }}" }
+    - { key: "post_max_size", value: "{{ php_post_max_size }}" }
+  notify: Restart PHP
+

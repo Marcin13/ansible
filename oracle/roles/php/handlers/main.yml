@@ -1,5 +1,6 @@
 ---
-- name: Restart PHP-FPM
-  service:
-    name: php7.4-fpm
+# Restart PHP-FPM service if the configuration or PHP installation changes
+- name: Restart PHP
+  systemd:
+    name: "php{{ php_version }}-fpm"
     state: restarted

@@ -1,7 +1,7 @@
 ---
 # Initial Server Setup
 # remote_user: The specified user will be created on the remote server and granted sudo privileges.
-remote_user: sammy
+r_user: sammy
 
 # MySQL Setup
 # mysql_root_password: This variable defines the database root password for the MariaDB server.

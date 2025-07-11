@@ -1,5 +1,24 @@
 ---
-php_packages: [ "php-pear", "php-curl", "php-dev", "php-gd", "php-mbstring", "php-zip", "php-fpm", "php-mysql", "php-xml", "php-imagick", "php-tidy", "php-xmlrpc", "php-intl"]
+# List of PHP packages to install
+php_packages: 
+  - "php-pear"
+  - "php-curl"
+  - "php-dev"
+  - "php-gd"
+  - "php-mbstring"
+  - "php-zip"
+  - "php-fpm"
+  - "php-mysql"
+  - "php-xml"
+  - "php-imagick"
+  - "php-tidy"
+  - "php-xmlrpc"
+  - "php-intl"
+
+# PHP version to install (e.g., 7.4, 8.0, 8.1, etc.)
+php_version: "8.0"
+
+# PHP settings to configure
 php_file_uploads: "On"
 php_upload_max_filesize: "64M"
 php_max_file_uploads: "20"
