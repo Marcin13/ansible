@@ -1,59 +1,125 @@
 ---
-- name: Install Prerequisites
-  apt: name=aptitude update_cache=yes state=latest force_apt_get=yes
+# - name: Install Prerequisites
+#   apt: name=aptitude update_cache=yes state=latest force_apt_get=yes
 
-# Sudo Group Setup
-- name: Make sure we have a "{{ remote_user }}" group
-  group:
-    name: "{{ remote_user }}"
-    state: present
+# # Sudo Group Setup
+# - name: Make sure we have a "{{ remote_user }}" group
+#   group:
+#     name: "{{ remote_user }}"
+#     state: present
 
-- name: Allow "{{ remote_user }}" group to have passwordless sudo
+# - name: Allow "{{ remote_user }}" group to have password less sudo
+#   lineinfile:
+#     path: /etc/sudoers
+#     state: present
+#     regexp: '^%{{ remote_user }}'
+#     line: '%{{ remote_user }} ALL=(ALL) NOPASSWD: ALL'
+#     validate: '/usr/sbin/visudo -cf %s'
+
+# # User + Key Setup
+# - name: Create a new regular user with sudo privileges
+#   user:
+#     name: "{{ remote_user }}"
+#     state: present
+#     groups: "{{ remote_user }}"
+#     append: true
+#     create_home: true
+#     shell: /bin/bash
+
+# - name: Set authorized key for remote user
+#   authorized_key:
+#     user: "{{ remote_user }}"
+#     state: present
+#     key: "{{ copy_local_key }}"
+
+# - name: Disable password authentication for root
+#   lineinfile:
+#     path: /etc/ssh/sshd_config
+#     state: present
+#     regexp: '^#?PermitRootLogin'
+#     line: 'PermitRootLogin prohibit-password'
+
+################## IPTABLES SETUP ##################
+
+# Step 1: Check if SSH (port 22) rule exists in iptables
+- name: Check if SSH (port 22) rule exists in iptables
+  command: grep -E '^\-A INPUT.*--dport 22' /etc/iptables/rules.v4
+  register: ssh_rule_check
+  failed_when: false
+  changed_when: false
+
+# Step 2: Check if iptables rule exists for port 443 (HTTPS)
+- name: Check if port 443 (HTTPS) rule exists in iptables
+  command: grep -E '^\-A INPUT.*--dport 443' /etc/iptables/rules.v4
+  register: port_443_check
+  failed_when: false
+  changed_when: false
+
+# Step 3: Check if iptables rule exists for port 80 (HTTP)
+- name: Check if port 80 (HTTP) rule exists in iptables
+  command: grep -E '^\-A INPUT.*--dport 80' /etc/iptables/rules.v4
+  register: port_80_check
+  failed_when: false
+  changed_when: false
+
+# Step 4: Add iptables rule for port 443 if it doesn't exist
+- name: Add iptables rule for port 443 if not present
   lineinfile:
-    path: /etc/sudoers
+    path: /etc/iptables/rules.v4
+    regexp: '^#?\-A INPUT.*--dport 443'
+    line: '-A INPUT -p tcp -m state --state NEW -m tcp --dport 443 -j ACCEPT'
+    insertafter: '^#?\-A INPUT.*--dport 22'
     state: present
-    regexp: '^%{{ remote_user }}'
-    line: '%{{ remote_user }} ALL=(ALL) NOPASSWD: ALL'
-    validate: '/usr/sbin/visudo -cf %s'
+  when: ssh_rule_check.rc == 0 and port_443_check.rc != 0  # Only if SSH rule exists and port 443 rule doesn't exist
 
-# User + Key Setup
-- name: Create a new regular user with sudo privileges
-  user:
-    name: "{{ remote_user }}"
-    state: present
-    groups: "{{ remote_user }}"
-    append: true
-    create_home: true
-    shell: /bin/bash
-
-- name: Set authorized key for remote user
-  authorized_key:
-    user: "{{ remote_user }}"
-    state: present
-    key: "{{ copy_local_key }}"
-
-- name: Disable password authentication for root
+# Step 5: Add iptables rule for port 80 if it doesn't exist
+- name: Add iptables rule for port 80 if not present
   lineinfile:
-    path: /etc/ssh/sshd_config
+    path: /etc/iptables/rules.v4
+    regexp: '^#?\-A INPUT.*--dport 80'
+    line: '-A INPUT -p tcp -m state --state NEW -m tcp --dport 80 -j ACCEPT'
+    insertafter: '^#?\-A INPUT.*--dport 22'
     state: present
-    regexp: '^#?PermitRootLogin'
-    line: 'PermitRootLogin prohibit-password'
+  when: ssh_rule_check.rc == 0 and port_80_check.rc != 0  # Only if SSH rule exists and port 80 rule doesn't exist
 
-# Install Packages
-- name: Update apt
-  apt: update_cache=yes
+# Step 6: Save and apply iptables rules only if changes were made
+- name: Apply iptables rules
+  command: iptables-restore < /etc/iptables/rules.v4
+  when: ssh_rule_check.rc == 0 and (port_443_check.rc != 0 or port_80_check.rc != 0)  # Only if port 443 or 80 rule was added
 
-- name: Install required system packages etc. curl, acl, git
-  apt: name={{ sys_packages }} state=latest
+# Step 7: Verify the iptables rules are applied correctly
+- name: Check iptables status to verify rule application
+  command: iptables -L -v -n
+  register: iptables_output
+  changed_when: false
+  failed_when: false
 
-# UFW Setup
-- name: UFW - Allow SSH connections
-  ufw:
-    rule: allow
-    name: OpenSSH
+# Step 8: Display the iptables output for debugging
+- name: Display iptables output for port checking
+  debug:
+    var: iptables_output.stdout_lines
+# Step 9: Restart iptables service to apply new rules
+- name: Restart iptables service to apply the new rules
+  systemd:
+    name: netfilter-persistent
+    state: restarted
+######### END IPTABLES SETUP #########
 
-- name: UFW - Deny all other incoming traffic by default
-  ufw:
-    state: enabled
-    policy: deny
-    direction: incoming
+# # Install Packages
+# - name: Update apt
+#   apt: update_cache=yes
+
+# - name: Install required system packages etc. curl, acl, git
+#   apt: name={{ sys_packages }} state=latest
+
+# # UFW Setup
+# - name: UFW - Allow SSH connections
+#   ufw:
+#     rule: allow
+#     name: OpenSSH
+
+# - name: UFW - Deny all other incoming traffic by default
+#   ufw:
+#     state: enabled
+#     policy: deny
+#     direction: incoming
